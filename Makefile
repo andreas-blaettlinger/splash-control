@@ -21,8 +21,14 @@ app: ## assemble dist/Splash.app
 check: ## script suites (core + agent-status)
 	bash Scripts/check_core.sh && bash Scripts/check_agent_status.sh
 
-test: ## swift-testing suite (needs the Testing module, e.g. `brew install swift`)
-	swift test
+test: ## swift-testing suite (Apple toolchain via xcrun)
+	# Runs on Apple's toolchain, not the Homebrew default: the Homebrew swift
+	# ships no SwiftUIMacros plugin, so the app-logic test target (which
+	# depends on the SwiftUI executable target) cannot compile with it.
+	# CLT additionally keeps libTestingMacros.dylib in a plugins/testing
+	# subdir the macro loader does not scan — the plugin-path flag restores
+	# it. Verified 2026-11-01 on CLT swift 6.4 / macOS 26.5 SDK.
+	xcrun swift test -Xswiftc -plugin-path -Xswiftc "$$(xcrun --find swift-frontend | xargs dirname)/../lib/swift/host/plugins/testing"
 
 lint: ## formatter gate, zero warnings (strict)
 	xcrun swift-format lint --strict --recursive Sources
